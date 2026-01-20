@@ -12,14 +12,18 @@ def find_project_root():
         current = current.parent
     return Path(__file__).parent  # Fallback
 
-def get_words(url, num_pages, part_of_speech, word_form):
+# Get all words of a specific part of speech
+# Returns list of rows: [[s, a, p, eng, ara, pos]]
+def get_words(session, url, num_pages, part_of_speech, word_form):
     rows = []
     i = 1
 
     while i <= num_pages:
+        # Set page URL
         page_url= f"{url}{i}"
 
-        response = requests.get(page_url)
+        # Get HTML from session object
+        response = session.get(page_url)
         html = response.text
         soup = BeautifulSoup(html, "html.parser")
 
@@ -45,8 +49,9 @@ def get_words(url, num_pages, part_of_speech, word_form):
                 rows.append(r)
         i += 1
 
-    return sorted(rows, key=lambda x:(int(x[0]), int(x[1])))
+    return rows
 
+# Save dataframe to CSV
 def save_rows(rows, file_name):
     df = pd.DataFrame(rows,
                       columns=['surah', 'ayat', 'position', 'english', 'arabic', 'pos', 'form'])
