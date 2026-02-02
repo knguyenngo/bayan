@@ -51,8 +51,78 @@ def get_words(session, url, num_pages, part_of_speech, word_form):
 
     return rows
 
+# Return dict of links for all POS and their forms
+def get_links(session):
+    response = session.get("https://corpus.quran.com/morphologicalsearch.jsp")
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Find pos and forms in search boxes
+    pos = soup.find(id="partOfSpeechList")
+    forms = soup.find(id="formList").find_all("option")
+
+    pos_dict, list_of_forms, all_links = {}, [], {}
+
+    # Find all parts of speech
+    for p in pos:
+        options = p.find_all("option")
+        if options:
+            for o in options:
+                # Part of Speech : Abbreviation
+                pos_dict[o.text] = o.get("value")
+
+    # Find all possible forms of a word
+    for f in forms:
+        value = f.get("value")
+        if value != "none":
+            list_of_forms.append(value)
+
+    # Find all links of every part of speech and their forms
+    for pos, abbreviation in pos_dict.items():
+        list_of_urls = []
+        # Create links for current part of speech with all forms
+        for f in list_of_forms:
+            url = f"https://corpus.quran.com/search.jsp?q=pos%3A{abbreviation}+{f}&s=1&page="
+            list_of_urls.append(url)
+        # Append list of urls to dict with POS as key
+        all_links[pos] = list_of_urls
+
+    return all_links
+
+# Find the maximum number of pages for the current POS and the current form
+def find_max_page(session, url):
+    max = 1
+    current_page = 1
+
+    while True:
+        url = f"{url}{current_page}"
+        response = session.get(url)
+        html = response.text
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Find navigation panel of current page
+        navPane = soup.find("div", class_="navigationPane")
+
+        # If curr page has navPane, check its values
+        if navPane:
+            end_of_nav = int(d.find_all("a")[-2].text)
+            # If current end of nav is greater than max, replace and set index at current
+            if end_of_nav > max:
+                max = end_of_nav
+                current_page = end_of_nav
+            # If equal, go to end of nav page
+            elif end_of_nav == max:
+                current_page = end_of_nav
+            # End of nav page and current navbar end is less than max, then we are already at last page
+            elif end_of_nav < max:
+                return max
+        # If page has no navPane, then it only has one page
+        else:
+            return max
+
 # Save dataframe to CSV
 def save_rows(rows, file_name):
     df = pd.DataFrame(rows,
                       columns=['surah', 'ayat', 'position', 'english', 'arabic', 'pos', 'form'])
     df.to_csv(file_name, index=False)
+
