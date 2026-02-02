@@ -68,8 +68,10 @@ def get_links(session):
         options = p.find_all("option")
         if options:
             for o in options:
+                # Clean text
+                pos = "_".join(o.text.split())
                 # Part of Speech : Abbreviation
-                pos_dict[o.text] = o.get("value")
+                pos_dict[pos] = o.get("value")
 
     # Find all possible forms of a word
     for f in forms:
@@ -105,9 +107,15 @@ def find_max_page(session, original_url):
 
         # If curr page has navPane, check its values
         if navPane:
-            end_of_nav = int(navPane.find_all("a")[-2].text)
-            if end_of_nav == 2:
-                return 2
+            # Find end of nav
+            nav = navPane.find_all("a")[-2].text
+
+            # Check if empty string or not
+            if nav != "":
+                # Convert to int for comparison
+                end_of_nav = int(navPane.find_all("a")[-2].text)
+            else:
+                return max
             # If current end of nav is greater than max, replace and set index at current
             if end_of_nav > max:
                 max = end_of_nav
@@ -120,6 +128,10 @@ def find_max_page(session, original_url):
                 return max
         # If page has no navPane, then it only has one page
         else:
+            # No entries found
+            no_search = soup.find("h4", string="Search Not Found")
+            if no_search:
+                return 0
             return max
 
 # Save dataframe to CSV
