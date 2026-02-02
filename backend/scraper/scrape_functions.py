@@ -90,12 +90,12 @@ def get_links(session):
     return all_links
 
 # Find the maximum number of pages for the current POS and the current form
-def find_max_page(session, url):
+def find_max_page(session, original_url):
     max = 1
     current_page = 1
 
     while True:
-        url = f"{url}{current_page}"
+        url = f"{original_url}{current_page}"
         response = session.get(url)
         html = response.text
         soup = BeautifulSoup(html, "html.parser")
@@ -105,7 +105,9 @@ def find_max_page(session, url):
 
         # If curr page has navPane, check its values
         if navPane:
-            end_of_nav = int(d.find_all("a")[-2].text)
+            end_of_nav = int(navPane.find_all("a")[-2].text)
+            if end_of_nav == 2:
+                return 2
             # If current end of nav is greater than max, replace and set index at current
             if end_of_nav > max:
                 max = end_of_nav
